@@ -3,6 +3,9 @@ import { IoClose } from "react-icons/io5";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
+import axios from "axios";
+import { toast } from "react-toastify";
+import { API } from "../../../../constant";
 
 // Validation Schema
 const workOrderSchema = yup.object().shape({
@@ -24,6 +27,7 @@ const defaultValues = {
 };
 
 const CreateRequest = ({ onclose }) => {
+  const tenderId = localStorage.getItem("tenderId");
   const {
     register,
     handleSubmit,
@@ -34,38 +38,61 @@ const CreateRequest = ({ onclose }) => {
     defaultValues,
   });
 
-  // local state to hold added materials
   const [materials, setMaterials] = useState([]);
   const [materialInput, setMaterialInput] = useState({
     materialName: "",
     quantity: "",
     unit: "",
   });
+  const [loading, setLoading] = useState(false);
 
   const handleMaterialAdd = () => {
     const { materialName, quantity, unit } = materialInput;
     if (!materialName || !quantity || !unit) {
-      alert("Please fill all material fields before adding.");
+      toast.warning("Please fill all material fields before adding.");
       return;
     }
 
     setMaterials((prev) => [...prev, { materialName, quantity, unit }]);
-    setMaterialInput({ materialName: "", quantity: "", unit: "" }); // reset inputs
+    setMaterialInput({ materialName: "", quantity: "", unit: "" });
   };
 
   const handleMaterialDelete = (index) => {
     setMaterials((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const onSubmit = (data) => {
+  const onSubmit = async (data) => {
     if (materials.length === 0) {
-      alert("Please add at least one material.");
+      toast.warning("Please add at least one material.");
       return;
     }
 
-    const finalData = { ...data, materialsRequired: materials };
-    // alert(JSON.stringify(finalData, null, 2));
-    onclose(); // Close modal on success
+    const finalData = {
+      ...data,
+      projectId: tenderId,
+      requestId: "WO006",
+      materialsRequired: materials,
+    };
+
+    try {
+      setLoading(true);
+      const res = await axios.post(
+        `${API}/workorderrequest/api/create`,
+        finalData
+      );
+
+      toast.success("Work order created successfully!");
+      reset();
+      setMaterials([]);
+      onclose();
+    } catch (error) {
+      console.error(error);
+      toast.error(
+        error.response?.data?.message || "Server error. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -100,7 +127,7 @@ const CreateRequest = ({ onclose }) => {
               <p className="text-xs text-red-500">{errors.title?.message}</p>
 
               <textarea
-              rows={4}
+                rows={4}
                 {...register("description")}
                 className="w-full border border-border-dark-grey placeholder:text-white rounded px-3 py-2 mb-4 text-white"
                 placeholder="Description"
@@ -162,7 +189,6 @@ const CreateRequest = ({ onclose }) => {
                 Materials Required
               </h2>
 
-              {/* Single Add Row */}
               <div className="flex flex-wrap items-center gap-2 mb-3">
                 <input
                   value={materialInput.materialName}
@@ -207,7 +233,6 @@ const CreateRequest = ({ onclose }) => {
                 </button>
               </div>
 
-              {/* Stored Materials Table */}
               {materials.length > 0 && (
                 <table className="w-full text-white text-sm border border-border-dark-grey">
                   <thead>
@@ -267,14 +292,16 @@ const CreateRequest = ({ onclose }) => {
               type="button"
               onClick={onclose}
               className="px-6 py-3 rounded border border-gray-400 text-gray-300 hover:bg-gray-800"
+              disabled={loading}
             >
               Cancel
             </button>
             <button
               type="submit"
+              disabled={loading}
               className="bg-[#142e56] text-white font-semibold px-6 py-3 rounded hover:bg-blue-700"
             >
-              Submit Request
+              {loading ? "Submitting..." : "Submit Request"}
             </button>
           </div>
         </form>

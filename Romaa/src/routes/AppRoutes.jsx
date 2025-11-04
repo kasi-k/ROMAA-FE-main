@@ -154,6 +154,7 @@ import EditContractor from "../pages/Hr/contract & Nmr/EditContractor";
 import ViewContractor from "../pages/Hr/contract & Nmr/ViewContractor";
 import PenaltyCardGrid from "../pages/tender/project penalty/PenaltyView";
 import { ToastContainer } from "react-toastify";
+import WorkOrderRequestForm from "../pages/projects/Wo issuance/work order request/WorkOrderRequestForm";
 
 const AppRoutes = () => {
   return (
@@ -248,6 +249,7 @@ const AppRoutes = () => {
               <Route path="woissuance">
                 <Route index element={<WoIssuance />} />
                 <Route path="viewworequest" element={<ViewWORequest />} />
+                <Route path="requestform/:tenderId/:requestId" element={<WorkOrderRequestForm />} />
                 <Route path="viewwoissuance" element={<ViewWOIssuance />} />
               </Route>
               <Route path="clientbillingprojects">
