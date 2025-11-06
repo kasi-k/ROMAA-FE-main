@@ -3,6 +3,7 @@ import React, { useState, useRef } from "react";
 import { IoClose } from "react-icons/io5";
 import { API } from "../../../../../constant";
 import { useParams } from "react-router-dom";
+import { toast } from "react-toastify";
 
 const sampleCSv= `item_name,description,specification,unit,quantity,final_unit_rate,category,remarks,work_section
 Earthwork,Pouring concrete for foundation,Grade 30 concrete,m3,100,75,Major,Ensure curing time is adequate,Foundation
@@ -56,6 +57,7 @@ const UploadBoq = ({ onclose, onSuccess }) => {
           headers: { "Content-Type": "multipart/form-data" },
         });
       } 
+      toast.success("BOQ uploaded successfully");
       if (onSuccess) onSuccess();
       if (onclose) onclose();
       setSaving(false);
