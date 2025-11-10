@@ -26,7 +26,7 @@ const defaultValues = {
   requiredByDate: "",
 };
 
-const CreateRequest = ({ onclose }) => {
+const CreateRequest = ({ onclose, onSuccess }) => {
   const tenderId = localStorage.getItem("tenderId");
   const {
     register,
@@ -70,7 +70,6 @@ const CreateRequest = ({ onclose }) => {
     const finalData = {
       ...data,
       projectId: tenderId,
-      requestId: "WO006",
       materialsRequired: materials,
     };
 
@@ -83,6 +82,7 @@ const CreateRequest = ({ onclose }) => {
 
       toast.success("Work order created successfully!");
       reset();
+      onSuccess();
       setMaterials([]);
       onclose();
     } catch (error) {

@@ -165,6 +165,7 @@ const AppRoutes = () => {
           <Route path="" element={<Login />} />
           <Route path="/forgotpassword" element={<ForgotPassword />} />
           <Route path="/resetpassword" element={<ResentPassword />} />
+                 <Route path="/projects/woissuance/requestform/:tenderId/:requestId" element={<WorkOrderRequestForm />} />
           <Route path="/" element={<LayOut />}>
             <Route path="/dashboard">
               <Route index element={<Dashboard />} />
@@ -249,7 +250,6 @@ const AppRoutes = () => {
               <Route path="woissuance">
                 <Route index element={<WoIssuance />} />
                 <Route path="viewworequest" element={<ViewWORequest />} />
-                <Route path="requestform/:tenderId/:requestId" element={<WorkOrderRequestForm />} />
                 <Route path="viewwoissuance" element={<ViewWOIssuance />} />
               </Route>
               <Route path="clientbillingprojects">

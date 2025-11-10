@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Title from "../../../components/Title";
 import { TbFileExport, TbFilter } from "react-icons/tb";
 import { LuFileCheck } from "react-icons/lu";
@@ -12,7 +12,7 @@ const tabs = [
   {
     id: "1",
     label: "Work Order Request",
-    component: <WORequest />,
+   component: (reloadTrigger) => <WORequest reloadTrigger={reloadTrigger} />,
     buttons: [
       {
         label: "Create Request",
@@ -52,10 +52,14 @@ const tabs = [
 
 const WoIssuance = () => {
   const navigate = useNavigate();
+  const [reloadWORequest, setReloadWORequest] = useState(0);
+
   const [openModal, setOpenModal] = useState(null);
 const [searchParams, setSearchParams] = useSearchParams();
 const defaultTab = tabs[0].id;
 const activeTab = searchParams.get("tab") || defaultTab;
+
+
 
 const handleTabChange = (id) => {
   setSearchParams({ tab: id });
@@ -115,12 +119,22 @@ const handleTabChange = (id) => {
           </div>
         </div>
         <div className=" h-full overflow-y-auto  no-scrollbar">
-          {activeTabData?.component}
+      {activeTabData?.component(
+    activeTab === "1" ? reloadWORequest : undefined
+  )}
         </div>
 
-        {openModal === "createrequest" && (
-          <CreateRequest onclose={() => setOpenModal(null)} />
-        )}
+   {openModal === "createrequest" && (
+  <CreateRequest
+    onclose={() => setOpenModal(null)}
+    onSuccess={() => {
+      // Trigger reload in WORequest
+      setReloadWORequest((prev) => prev + 1);
+      setOpenModal(null);
+    }}
+  />
+)}
+
       </div>
     </>
   );
