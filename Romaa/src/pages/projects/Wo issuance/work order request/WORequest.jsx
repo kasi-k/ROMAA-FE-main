@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { API } from "../../../../constant";
+import { set } from "react-hook-form";
 
 const WORequest = () => {
   const projectId = localStorage.getItem("tenderId");
@@ -16,11 +17,14 @@ const WORequest = () => {
   const [loading, setLoading] = useState(true);
   const [viewQuote, setViewQuote] = useState(null);
 
+  
+
   // ✅ Fetch data
   useEffect(() => {
     const fetchData = async () => {
       try {
         const res = await axios.get(`${API}/workorderrequest/api/getbyId/${projectId}`);
+        
         if (res.data.data && Array.isArray(res.data.data)) {
           setData(res.data.data);
         } else {
@@ -41,7 +45,7 @@ const WORequest = () => {
 
   // ✅ Generate Work Order link
   const handleGenerateWO = (item) => {
-    const link = `${window.location.origin}/projects/woissuance/requestform/${projectId}/${"WO006"}`;
+    const link = `${window.location.origin}/projects/woissuance/requestform/${projectId}/${item.requestId}`;
     navigator.clipboard.writeText(link);
     toast.success("Work Order link copied to clipboard!");
   };
