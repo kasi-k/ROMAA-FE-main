@@ -12,7 +12,7 @@ const tabs = [
   {
     id: "1",
     label: "Work Order Request",
-   component: (reloadTrigger) => <WORequest reloadTrigger={reloadTrigger} />,
+    component: (reloadTrigger) => <WORequest reloadTrigger={reloadTrigger} />,
     buttons: [
       {
         label: "Create Request",
@@ -22,29 +22,33 @@ const tabs = [
       {
         label: "Export",
         icon: <TbFileExport size={23} />,
-        className: " dark:bg-layout-dark  dark:text-white bg-white text-darkest-blue",
+        className:
+          " dark:bg-layout-dark  dark:text-white bg-white text-darkest-blue",
       },
       {
         label: "Filter",
         icon: <TbFilter size={23} />,
-        className: " dark:bg-layout-dark  dark:text-white  bg-white text-darkest-blue",
+        className:
+          " dark:bg-layout-dark  dark:text-white  bg-white text-darkest-blue",
       },
     ],
   },
   {
     id: "2",
     label: "Work Order Issuance",
-    component: <WorkOrderIssuance />,
+    component: () => <WorkOrderIssuance />,
     buttons: [
       {
         label: "Export",
         icon: <TbFileExport size={23} />,
-        className: "  dark:bg-layout-dark  dark:text-white bg-white text-darkest-blue",
+        className:
+          "  dark:bg-layout-dark  dark:text-white bg-white text-darkest-blue",
       },
       {
         label: "Filter",
         icon: <TbFilter size={23} />,
-        className: " dark:bg-layout-dark  dark:text-white bg-white text-darkest-blue",
+        className:
+          " dark:bg-layout-dark  dark:text-white bg-white text-darkest-blue",
       },
     ],
   },
@@ -55,15 +59,13 @@ const WoIssuance = () => {
   const [reloadWORequest, setReloadWORequest] = useState(0);
 
   const [openModal, setOpenModal] = useState(null);
-const [searchParams, setSearchParams] = useSearchParams();
-const defaultTab = tabs[0].id;
-const activeTab = searchParams.get("tab") || defaultTab;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const defaultTab = tabs[0].id;
+  const activeTab = searchParams.get("tab") || defaultTab;
 
-
-
-const handleTabChange = (id) => {
-  setSearchParams({ tab: id });
-};
+  const handleTabChange = (id) => {
+    setSearchParams({ tab: id });
+  };
 
   const activeTabData = tabs.find((tab) => tab.id === activeTab);
   const buttonsWithHandlers = activeTabData.buttons.map((button) => {
@@ -119,22 +121,21 @@ const handleTabChange = (id) => {
           </div>
         </div>
         <div className=" h-full overflow-y-auto  no-scrollbar">
-      {activeTabData?.component(
-    activeTab === "1" ? reloadWORequest : undefined
-  )}
+          {activeTabData?.component(
+            activeTab === "1" ? reloadWORequest : undefined
+          )}
         </div>
 
-   {openModal === "createrequest" && (
-  <CreateRequest
-    onclose={() => setOpenModal(null)}
-    onSuccess={() => {
-      // Trigger reload in WORequest
-      setReloadWORequest((prev) => prev + 1);
-      setOpenModal(null);
-    }}
-  />
-)}
-
+        {openModal === "createrequest" && (
+          <CreateRequest
+            onclose={() => setOpenModal(null)}
+            onSuccess={() => {
+              // Trigger reload in WORequest
+              setReloadWORequest((prev) => prev + 1);
+              setOpenModal(null);
+            }}
+          />
+        )}
       </div>
     </>
   );
