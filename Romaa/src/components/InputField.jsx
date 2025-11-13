@@ -8,13 +8,14 @@ export const InputField = ({
   errors,
   placeholder,
   type = "text",
-  colInp="col-span-5",
-  colLab="col-span-3",
+  colInp = "col-span-5",
+  colLab = "col-span-3",
   options = [],
-  onChange
+  onChange,
+  readOnly = false,
 }) => {
   const [showPassword, setShowPassword] = useState(false);
-    const registerProps = register(name);
+  const registerProps = register(name);
   return (
     <div className="grid grid-cols-8 items-center gap-4">
       <label className={`${colLab} text-sm font-medium`}>{label}</label>
@@ -23,7 +24,7 @@ export const InputField = ({
         <select
           defaultValue=""
           {...register(name)}
-           onChange={(e) => {
+          onChange={(e) => {
             registerProps.onChange(e); // react-hook-form handler
             if (onChange) onChange(e); // custom handler
           }}
@@ -33,7 +34,7 @@ export const InputField = ({
           <option value="" disabled>
             {placeholder}
           </option>
-          {options?.map((option,index) => (
+          {options?.map((option, index) => (
             <option key={option.value || `${index}`} value={option.value}>
               {option.label}
             </option>
@@ -43,6 +44,7 @@ export const InputField = ({
         <textarea
           placeholder={placeholder}
           {...register(name)}
+          readOnly={readOnly} 
           className={`${colInp} border dark:border-border-dark-grey border-input-bordergrey rounded-lg outline-none py-2 px-2 placeholder:text-xs placeholder:font-light
         ${errors[name] ? "border-red-500" : ""}`}
           rows={4}
@@ -52,6 +54,7 @@ export const InputField = ({
           type="file"
           placeholder={placeholder}
           {...register(name)}
+          
           className={`col-span-5 border appearance-none dark:border-border-dark-grey border-input-bordergrey rounded-lg outline-none py-2 px-2 placeholder:text-xs placeholder:font-light
         ${errors[name] ? "border-red-500" : ""}`}
         />
@@ -60,6 +63,7 @@ export const InputField = ({
           <input
             type={showPassword ? "text" : "password"}
             placeholder={placeholder}
+            readOnly={readOnly} 
             {...register(name)}
             className={`w-full border appearance-none dark:border-border-dark-grey border-input-bordergrey rounded-lg outline-none py-2 px-2 pr-8 placeholder:text-xs placeholder:font-light
             ${errors[name] ? "border-red-500" : ""}`}
@@ -77,6 +81,7 @@ export const InputField = ({
         <input
           type={type}
           placeholder={placeholder}
+          readOnly={readOnly} 
           {...register(name)}
           className={`col-span-5 border dark:border-border-dark-grey border-input-bordergrey rounded-lg outline-none py-2 px-2 placeholder:text-xs placeholder:font-light
         ${errors[name] ? "border-red-500" : ""}`}

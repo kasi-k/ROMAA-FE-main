@@ -1,83 +1,99 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Button from "../../../components/Button";
 import Title from "../../../components/Title";
 import { TbPencil } from "react-icons/tb";
 import { IoChevronBackSharp } from "react-icons/io5";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const ViewMaterialRecieved = () => {
   const [isEditing, setIsEditing] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const materialData = location.state?.item || {}; // ✅ Comes from navigate(..., { state: { item } })
 
-  // Sample data for Material Received
-  const [fields, setFields] = useState([
-    {
-      label: "Material",
-      value: "Cement",
-      type: "text",
-      key: "material",
-      tooltip: "Name of the material received",
-    },
-    {
-      label: "Unit",
-      value: "Bags",
-      type: "text",
-      key: "unit",
-      tooltip: "Measurement unit for the material",
-    },
-    {
-      label: "PO Qty",
-      value: 100,
-      type: "number",
-      key: "poQty",
-      tooltip: "Purchase Order Quantity",
-    },
-    {
-      label: "Recieved Qty",
-      value: 80,
-      type: "number",
-      key: "recievedQty",
-      tooltip: "Quantity of material received",
-    },
-    {
-      label: "Pending",
-      value: 20,
-      type: "number",
-      key: "pending",
-      tooltip: "Pending quantity to be received",
-    },
-    {
-      label: "Ordered Date",
-      value: "2024-05-20",
-      type: "date",
-      key: "orderedDate",
-      tooltip: "Date when the material was ordered",
-    },
-    {
-      label: "Amount",
-      value: 32000,
-      type: "number",
-      key: "amount",
-      tooltip: "Total amount for the material",
-    },
-  ]);
+  const [fields, setFields] = useState([]);
+
+  // Helper — format date as DD-MM-YYYY
+  const formatDate = (dateString) => {
+    if (!dateString) return "-";
+    const date = new Date(dateString);
+    if (isNaN(date)) return "-";
+    return date.toLocaleDateString("en-GB").replaceAll("/", "-");
+  };
+
+  // ✅ Populate fields from materialData
+  useEffect(() => {
+    if (Object.keys(materialData).length > 0) {
+      setFields([
+        {
+          label: "Material",
+          value: materialData.item_description || "-",
+          type: "text",
+          key: "item_description",
+          tooltip: "Name of the material received",
+        },
+        {
+          label: "Unit",
+          value: materialData.unit || "-",
+          type: "text",
+          key: "unit",
+          tooltip: "Measurement unit for the material",
+        },
+        {
+          label: "PO Qty",
+          value: materialData.quantity ?? 0,
+          type: "number",
+          key: "quantity",
+          tooltip: "Purchase Order Quantity",
+        },
+        {
+          label: "Received Qty",
+          value: materialData.received_quantity ?? 0,
+          type: "number",
+          key: "received_quantity",
+          tooltip: "Quantity of material received",
+        },
+        {
+          label: "Pending",
+          value: materialData.pending_quantity ?? 0,
+          type: "number",
+          key: "pending_quantity",
+          tooltip: "Pending quantity to be received",
+        },
+        {
+          label: "Ordered Date",
+          value: formatDate(materialData.ordered_date),
+          type: "date",
+          key: "ordered_date",
+          tooltip: "Date when the material was ordered",
+        },
+        {
+          label: "Amount",
+          value: materialData.total_amount ?? 0,
+          type: "number",
+          key: "total_amount",
+          tooltip: "Total amount for the material",
+        },
+      ]);
+    }
+  }, [materialData]);
 
   const updateField = (key, newValue) => {
-    setFields(
-      fields.map((item) =>
+    setFields((prev) =>
+      prev.map((item) =>
         item.key === key ? { ...item, value: newValue } : item
       )
     );
   };
 
   const handleEditClick = () => setIsEditing(true);
+
   const handleSaveClick = () => {
     setIsEditing(false);
     console.log("Saved Fields:", fields);
-    // API save calls here
+    // You can call API PUT/POST here with updated field values
   };
 
-  // Tooltip wrapper
   const TooltipWrapper = ({ tooltip, children }) => {
     if (!tooltip) return children;
     return (
@@ -93,26 +109,16 @@ const ViewMaterialRecieved = () => {
 
   const renderField = (field) => {
     if (isEditing) {
-      if (field.type === "textarea") {
-        return (
-          <textarea
-            className="w-full p-2 border border-input-bordergrey dark:border-border-dark-grey rounded resize-none text-xs"
-            rows={4}
-            value={field.value}
-            onChange={(e) => updateField(field.key, e.target.value)}
-          />
-        );
-      }
       return (
         <input
           type={field.type || "text"}
-          className="w-full p-1 border border-input-bordergrey dark:border-border-dark-grey  rounded text-xs"
+          className="w-full p-1 border border-input-bordergrey dark:border-border-dark-grey rounded text-xs"
           value={field.value}
           onChange={(e) => updateField(field.key, e.target.value)}
         />
       );
     }
-    // Not editing: show value + tooltip
+
     return (
       <TooltipWrapper tooltip={field.tooltip}>
         <p className="text-xs opacity-50">{field.value}</p>
@@ -120,15 +126,21 @@ const ViewMaterialRecieved = () => {
     );
   };
 
+  if (!materialData || Object.keys(materialData).length === 0) {
+    return <p className="text-center mt-4 text-sm">No material data found</p>;
+  }
+
   return (
     <div>
       <div className="flex justify-between items-center my-2">
         <Title
           title="Site Management"
-          sub_title="Material Recieved"
-          active_title={isEditing?"Edit Material Received":"View Material Recieved"}
+          sub_title="Material Received"
+          active_title={
+            isEditing ? "Edit Material Received" : "View Material Received"
+          }
         />
-        {!isEditing ? (
+        {/* {!isEditing ? (
           <Button
             button_name="Edit"
             button_icon={<TbPencil size={23} />}
@@ -136,12 +148,12 @@ const ViewMaterialRecieved = () => {
           />
         ) : (
           <Button button_name="Save" onClick={handleSaveClick} />
-        )}
+        )} */}
       </div>
 
       <div className="dark:bg-layout-dark bg-white p-4 rounded-lg space-y-2 text-sm">
         <p className="font-semibold text-center text-lg">
-          Material Recieved Details
+          Material Received Details
         </p>
         <div className="grid grid-cols-12 gap-2 items-start">
           {fields.map((field) => (
@@ -152,6 +164,7 @@ const ViewMaterialRecieved = () => {
           ))}
         </div>
       </div>
+
       <div className="flex justify-end py-2 ">
         <Button
           onClick={() => navigate("..")}

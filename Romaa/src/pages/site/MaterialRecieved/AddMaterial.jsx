@@ -1,113 +1,223 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
+import axios from "axios";
 import Modal from "../../../components/Modal";
 import { InputField } from "../../../components/InputField";
+import { toast } from "react-toastify";
+import { API } from "../../../constant";
 
 const schema = yup.object().shape({
-  material: yup.string().required("Material is required"),
-  unit: yup.string().required("Unit is required"),
-  poQty: yup
+  item_description: yup.string().required("Material is required"),
+  ordered_date: yup.date().required("Ordered Date is required"),
+  received_quantity: yup
     .number()
-    .typeError("PO Qty must be a number")
-    .required("PO Qty is required"),
-  recievedQty: yup
-    .number()
-    .typeError("Recieved Qty must be a number")
-    .required("Recieved Qty is required"),
-  pending: yup
-    .number()
-    .typeError("Pending must be a number")
-    .required("Pending is required"),
-  orderedDate: yup.date().required("Ordered Date is required"),
-  amount: yup
-    .number()
-    .typeError("Amount must be a number")
-    .required("Amount is required"),
+    .typeError("Received Qty must be a number")
+    .required("Received Qty is required")
+    .min(0, "Cannot be negative"),
 });
 
-const AddMaterial = ({ onclose }) => {
+const AddMaterial = ({ onclose,onSuccess }) => {
+  const tenderId = localStorage.getItem("tenderId");
+  const [materials, setMaterials] = useState([]);
+  const [selectedMaterial, setSelectedMaterial] = useState(null);
+
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
+    setError,
+    clearErrors,
     formState: { errors },
+    reset,
   } = useForm({
     resolver: yupResolver(schema),
   });
 
-  const onSubmit = (data) => {
-    console.log("Form Data:", data);
-    onclose();
+  const received_quantity = watch("received_quantity") || 0;
+
+  // Fetch materials
+  useEffect(() => {
+    const fetchMaterials = async () => {
+      try {
+        const res = await axios.get(`${API}/material/getall/${tenderId}`);
+        setMaterials(res.data.data || []);
+      } catch (err) {
+        console.error("Error fetching materials:", err);
+      }
+    };
+    fetchMaterials();
+  }, [tenderId]);
+
+  // Material selection
+  const handleMaterialSelect = (e) => {
+    const materialName = e.target.value;
+    const mat = materials.find((m) => m.item_description === materialName);
+    setSelectedMaterial(mat);
+
+    if (mat) {
+      setValue("unit", mat.unit);
+      setValue("quantity", mat.quantity);
+      setValue("total_amount", mat.total_amount);
+      setValue("received_quantity", "");
+      clearErrors("received_quantity");
+    } else {
+      setSelectedMaterial(null);
+      reset();
+    }
   };
+
+  // Validate and auto-update pending
+  useEffect(() => {
+    if (!selectedMaterial) return;
+
+    const totalQty = Number(selectedMaterial.quantity || 0);
+    const typedQty = Number(received_quantity || 0);
+    const alreadyReceived = Number(selectedMaterial.received_quantity || 0);
+    const newPending = Math.max(totalQty - (alreadyReceived + typedQty), 0);
+
+    // Live validation: prevent exceeding total quantity
+    if (typedQty + alreadyReceived > totalQty) {
+      setError("received_quantity", {
+        type: "manual",
+        message: `Cannot exceed PO Qty (${totalQty})`,
+      });
+    } else {
+      clearErrors("received_quantity");
+    }
+
+    // Update pending qty only if it changed
+    const currentPending = watch("pending_quantity");
+    if (currentPending !== newPending) {
+      setValue("pending_quantity", newPending);
+    }
+  }, [received_quantity, selectedMaterial]);
+
+  // Submit handler
+  const onSubmit = async (data) => {
+    try {
+      const payload = {
+        tender_id: tenderId,
+        item_description: data.item_description,
+        unit: data.unit,
+        quantity: data.quantity,
+        received_quantity: data.received_quantity,
+        pending_quantity: data.pending_quantity,
+        ordered_date: data.ordered_date,
+        total_amount: data.total_amount,
+      };
+
+      await axios.post(`${API}/material/addreceived`, payload);
+      if(onSuccess) onSuccess();
+      toast.success("Material received successfully!");
+      reset();
+      onclose();
+    } catch (err) {
+      console.error("Error saving material:", err);
+      toast.error("Failed to save material");
+    }
+  };
+
+  // Compute pending dynamically for display
+  const totalQty = selectedMaterial?.quantity || 0;
+  const alreadyReceived = selectedMaterial?.received_quantity || 0;
+  const pending = Math.max(
+    totalQty - (alreadyReceived + Number(received_quantity || 0)),
+    0
+  );
 
   return (
     <Modal
-      title={"Add Material Recieved"}
+      title="Add Material Received"
       onclose={onclose}
-      widthClassName={"lg:w-[500px] md:w-[500px] w-[96]"}
+      widthClassName="lg:w-[500px] md:w-[500px] w-[96]"
       child={
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="px-6 py-6">
             <div className="lg:space-y-4 space-y-3">
-              <InputField
-                label="Material"
-                type="text"
-                name="material"
-                register={register}
-                errors={errors}
-                placeholder="Enter material"
-              />
+              {/* Material Dropdown */}
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-white">
+                  Material
+                </label>
+                <select
+                  {...register("item_description")}
+                  onChange={handleMaterialSelect}
+                  className="w-full border border-gray-300 rounded p-2 mt-1 bg-layout-dark"
+                >
+                  <option value="">Select Material</option>
+                  {materials.map((mat, index) => (
+                    <option
+                      key={mat._id || `${mat.item_description}-${index}`}
+                      value={mat.item_description}
+                    >
+                      {mat.item_description}
+                    </option>
+                  ))}
+                </select>
+                {errors.item_description && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {errors.item_description.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Autofilled fields */}
               <InputField
                 label="Unit"
                 type="text"
                 name="unit"
                 register={register}
                 errors={errors}
-                placeholder="Enter unit"
+                readOnly
               />
               <InputField
                 label="PO Qty"
                 type="number"
-                name="poQty"
+                name="quantity"
                 register={register}
                 errors={errors}
-                placeholder="Enter PO Qty"
-              />
-              <InputField
-                label="Recieved Qty"
-                type="number"
-                name="recievedQty"
-                register={register}
-                errors={errors}
-                placeholder="Enter Recieved Qty"
-              />
-              <InputField
-                label="Pending"
-                type="number"
-                name="pending"
-                register={register}
-                errors={errors}
-                placeholder="Enter Pending Qty"
-              />
-              <InputField
-                label="Oredered Date"
-                type="date"
-                name="orderedDate"
-                register={register}
-                errors={errors}
-                placeholder="Select Ordered Date"
+                readOnly
               />
               <InputField
                 label="Amount"
                 type="number"
-                name="amount"
+                name="total_amount"
                 register={register}
                 errors={errors}
-                placeholder="Enter Amount"
+                readOnly
+              />
+
+              {/* Editable fields */}
+              <InputField
+                label="Received Qty"
+                type="number"
+                name="received_quantity"
+                register={register}
+                errors={errors}
+                placeholder="Enter Received Qty"
+              />
+              <InputField
+                label="Pending"
+                type="number"
+                name="pending_quantity"
+                register={register}
+                errors={errors}
+                value={pending}
+                readOnly
+              />
+              <InputField
+                label="Ordered Date"
+                type="date"
+                name="ordered_date"
+                register={register}
+                errors={errors}
               />
             </div>
           </div>
+
           <div className="mx-5 text-xs flex lg:justify-end md:justify-center justify-center gap-2 mb-4">
             <button
               type="button"
