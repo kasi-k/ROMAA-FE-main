@@ -3,81 +3,93 @@ import Button from "../../../components/Button";
 import Title from "../../../components/Title";
 import { TbPencil } from "react-icons/tb";
 import { IoChevronBackSharp } from "react-icons/io5";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const ViewMaterialIssue = () => {
   const [isEditing, setIsEditing] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Sample data for Material Issue
+  // 🔥 GET DATA FROM MATERIAL ISSUE LIST PAGE
+  const materialData = location.state?.item || {};
+
+  // 🔥 DYNAMIC FIELDS BASED ON materialData
   const [fields, setFields] = useState([
     {
       label: "Site Name",
-      value: "Site B",
+      value: materialData.site_name || "",
       type: "text",
-      key: "siteName",
+      key: "site_name",
       tooltip: "Name of the site where material is issued",
     },
     {
       label: "Material",
-      value: "Steel Rods",
+      value: materialData.item_description || "",
       type: "text",
-      key: "material",
+      key: "item_description",
       tooltip: "Material issued to the site",
     },
     {
       label: "Unit",
-      value: "Ton",
+      value: materialData.unit || "",
       type: "text",
       key: "unit",
       tooltip: "Measurement unit for the material",
     },
     {
       label: "Issued Qty",
-      value: 2,
+      value: materialData.issued_quantity || "",
       type: "number",
-      key: "issuedQty",
+      key: "issued_quantity",
       tooltip: "Quantity of material issued",
     },
     {
       label: "Work Location",
-      value: "Pillars",
+      value: materialData.work_location || "",
       type: "text",
-      key: "workLocation",
-      tooltip: "Location at site where material is used",
+      key: "work_location",
+      tooltip: "Location where the material is used",
     },
     {
       label: "Priority Level",
-      value: "Medium",
+      value: materialData.priority_level || "",
       type: "text",
-      key: "priorityLevel",
-      tooltip: "Priority level of the material request",
+      key: "priority_level",
+      tooltip: "Priority level of this issued material",
     },
     {
       label: "Requested By",
-      value: "Jane Smith",
+      value: materialData.requested_by || "",
       type: "text",
-      key: "requestedBy",
+      key: "requested_by",
       tooltip: "Person who requested the material",
     },
   ]);
 
   const updateField = (key, newValue) => {
-    setFields(
-      fields.map((item) =>
+    setFields((prev) =>
+      prev.map((item) =>
         item.key === key ? { ...item, value: newValue } : item
       )
     );
   };
 
   const handleEditClick = () => setIsEditing(true);
+
   const handleSaveClick = () => {
     setIsEditing(false);
-    console.log("Saved Fields:", fields);
-    // API save calls here
+
+    // Prepare payload to send API
+    const updatedData = fields.reduce((acc, field) => {
+      acc[field.key] = field.value;
+      return acc;
+    }, {});
+
+    console.log("Updated Material Issue:", updatedData);
+
+    // TODO: API save call here
   };
 
-  // Tooltip wrapper
   const TooltipWrapper = ({ tooltip, children }) => {
     if (!tooltip) return children;
     return (
@@ -93,16 +105,6 @@ const ViewMaterialIssue = () => {
 
   const renderField = (field) => {
     if (isEditing) {
-      if (field.type === "textarea") {
-        return (
-          <textarea
-            className="w-full p-2 border border-input-bordergrey dark:border-border-dark-grey rounded resize-none text-xs"
-            rows={4}
-            value={field.value}
-            onChange={(e) => updateField(field.key, e.target.value)}
-          />
-        );
-      }
       return (
         <input
           type={field.type || "text"}
@@ -112,7 +114,7 @@ const ViewMaterialIssue = () => {
         />
       );
     }
-    // Not editing: show value + tooltip
+
     return (
       <TooltipWrapper tooltip={field.tooltip}>
         <p className="text-xs opacity-50">{field.value}</p>
@@ -126,8 +128,9 @@ const ViewMaterialIssue = () => {
         <Title
           title="Site Management"
           sub_title="Material Issue"
-          active_title={isEditing ?"Edit Material Issued":"View Material Issued"}
+          active_title={isEditing ? "Edit Material Issued" : "View Material Issued"}
         />
+
         {!isEditing ? (
           <Button
             button_name="Edit"
@@ -140,9 +143,8 @@ const ViewMaterialIssue = () => {
       </div>
 
       <div className="dark:bg-layout-dark bg-white p-4 rounded-lg space-y-2 text-sm">
-        <p className="font-semibold text-center text-lg">
-          Material Issue Details
-        </p>
+        <p className="font-semibold text-center text-lg">Material Issue Details</p>
+
         <div className="grid grid-cols-12 gap-2 items-start">
           {fields.map((field) => (
             <React.Fragment key={field.key}>
@@ -152,7 +154,8 @@ const ViewMaterialIssue = () => {
           ))}
         </div>
       </div>
-      <div className="flex justify-end py-2 ">
+
+      <div className="flex justify-end py-2">
         <Button
           onClick={() => navigate("..")}
           button_name="Back"

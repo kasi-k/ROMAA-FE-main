@@ -8,11 +8,17 @@ import { InputField } from "../../../components/InputField";
 import { API } from "../../../constant";
 import { toast } from "react-toastify";
 
+// Yup validation schema
 const schema = yup.object().shape({
   site_name: yup.string().required("Site Name is required"),
   item_description: yup.string().required("Material is required"),
   unit: yup.string().required("Unit is required"),
-  quantity: yup.number().typeError("Invalid Quantity"),
+  received_quantity: yup.number().required(),
+  issued_quantity: yup
+    .number()
+    .typeError("Invalid quantity")
+    .required("Issued Quantity is required")
+    .min(1, "Issued quantity must be at least 1"),
   work_location: yup.string().required("Work Location is required"),
   priority_level: yup
     .string()
@@ -24,7 +30,8 @@ const schema = yup.object().shape({
 const AddMaterialIssue = ({ onclose, onSuccess }) => {
   const tenderId = localStorage.getItem("tenderId");
   const [materials, setMaterials] = useState([]);
-  const [selectedMaterial, setSelectedMaterial] = useState(null);
+  const [receivedQty, setReceivedQty] = useState(0);
+  const [issuedError, setIssuedError] = useState("");
 
   const {
     register,
@@ -35,12 +42,24 @@ const AddMaterialIssue = ({ onclose, onSuccess }) => {
     resolver: yupResolver(schema),
   });
 
-  // ✅ Fetch all materials for tenderId
+  // Fetch materials with balance > 0 (only show usable materials)
   const fetchMaterials = async () => {
     try {
       const res = await axios.get(`${API}/material/getall/${tenderId}`);
-      const data = res.data.data || [];
-      setMaterials(data);
+      const allMaterials = res.data.data || [];
+
+      // Filter materials that still have balance left
+      const filtered = allMaterials.filter((mat) => {
+        const totalIssued = mat.issued
+          ? mat.issued.reduce((sum, r) => sum + r.issued_quantity, 0)
+          : 0;
+
+        const balance = mat.received_quantity - totalIssued;
+
+        return balance > 0; // only show items with balance
+      });
+
+      setMaterials(filtered);
     } catch (error) {
       console.error("Error fetching materials:", error);
     }
@@ -50,42 +69,64 @@ const AddMaterialIssue = ({ onclose, onSuccess }) => {
     if (tenderId) fetchMaterials();
   }, [tenderId]);
 
-  // ✅ When user selects material, autofill unit and total (readonly)
+  // When material changes
   const handleMaterialChange = (e) => {
-    const materialName = e.target.value;
-    const found = materials.find(
-      (item) => item.item_description === materialName
-    );
+    const selected = e.target.value;
+    const found = materials.find((m) => m.item_description === selected);
 
     if (found) {
-      setSelectedMaterial(found);
-      setValue("unit", found.unit || "");
-      setValue("quantity", found.quantity || 0); // 🔹 use total_material for overall quantity
+      // calculate total issued
+      const totalIssued = found.issued
+        ? found.issued.reduce((sum, r) => sum + r.issued_quantity, 0)
+        : 0;
+
+      const balance = found.received_quantity - totalIssued;
+
+      setValue("unit", found.unit);
+      setValue("received_quantity", balance); // <-- SHOW BALANCE instead of original
+
+      setReceivedQty(balance);
     } else {
-      setSelectedMaterial(null);
       setValue("unit", "");
-      setValue("quantity", "");
+      setValue("received_quantity", 0);
+      setReceivedQty(0);
     }
   };
 
-  // ✅ Submit form
+  // Validate issued qty does not exceed received qty
+  const validateIssuedQty = (e) => {
+    const value = Number(e.target.value);
+
+    if (value > receivedQty) {
+      setIssuedError("Issued quantity cannot exceed received quantity");
+    } else {
+      setIssuedError("");
+    }
+  };
+
+  // Submit form
   const onSubmit = async (data) => {
+    if (Number(data.issued_quantity) > receivedQty) {
+      setIssuedError("Issued quantity cannot exceed received quantity");
+      return;
+    }
+
+    const payload = {
+      tender_id: tenderId,
+      item_description: data.item_description,
+      unit: data.unit,
+      received_quantity: data.received_quantity,
+      issued_quantity: data.issued_quantity,
+      site_name: data.site_name.toLowerCase(),
+      work_location: data.work_location,
+      priority_level: data.priority_level,
+      requested_by: data.requested_by,
+    };
+
     try {
-      const payload = {
-        tender_id: tenderId,
-        item_description: data.item_description,
-        unit: data.unit,
-        quantity: data.quantity,
-        site_name: data.site_name,
-        work_location: data.work_location,
-        priority_level: data.priority_level,
-        requested_by: data.requested_by,
-      };
-
-      console.log("Submitting:", payload);
-
       await axios.post(`${API}/material/addissued`, payload);
       toast.success("Material issued successfully!");
+
       if (onSuccess) onSuccess();
       onclose();
     } catch (error) {
@@ -103,6 +144,7 @@ const AddMaterialIssue = ({ onclose, onSuccess }) => {
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="px-6 py-6">
             <div className="lg:space-y-4 space-y-3">
+              {/* Site Name */}
               <InputField
                 label="Site Name"
                 type="text"
@@ -114,21 +156,20 @@ const AddMaterialIssue = ({ onclose, onSuccess }) => {
 
               {/* Material Dropdown */}
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-white">
-                  Material
-                </label>
+                <label className="text-sm font-medium">Material</label>
                 <select
                   {...register("item_description")}
                   onChange={handleMaterialChange}
                   className="w-full bg-layout-dark mt-1 p-2 border rounded text-sm"
                 >
                   <option value="">Select Material</option>
-                  {materials.map((mat, index) => (
-                    <option key={index} value={mat.item_description}>
+                  {materials.map((mat, idx) => (
+                    <option key={idx} value={mat.item_description}>
                       {mat.item_description}
                     </option>
                   ))}
                 </select>
+
                 {errors.item_description && (
                   <p className="text-xs text-red-500 mt-1">
                     {errors.item_description.message}
@@ -136,27 +177,44 @@ const AddMaterialIssue = ({ onclose, onSuccess }) => {
                 )}
               </div>
 
+              {/* Unit */}
               <InputField
                 label="Unit"
                 type="text"
                 name="unit"
                 register={register}
                 errors={errors}
-                placeholder="Enter Unit"
                 readOnly
               />
 
-              {/* Read-only Issued Quantity (autofilled) */}
+              {/* Received Quantity */}
               <InputField
-                label="Issued Qty (Total Available)"
+                label="Available Quantity"
                 type="number"
-                name="quantity"
+                name="received_quantity"
                 register={register}
                 errors={errors}
-                placeholder="Auto-filled quantity"
                 readOnly
               />
 
+              {/* Issued Quantity */}
+              <div>
+                <label className="text-sm font-medium">Issued Quantity</label>
+                <input
+                  type="number"
+                  {...register("issued_quantity")}
+                  onChange={validateIssuedQty}
+                  className="w-full bg-layout-dark mt-1 p-2 border rounded text-sm"
+                  placeholder="Enter Issued Quantity"
+                />
+                {(issuedError || errors.issued_quantity) && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {issuedError || errors.issued_quantity.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Work Location */}
               <InputField
                 label="Work Location"
                 type="text"
@@ -166,6 +224,7 @@ const AddMaterialIssue = ({ onclose, onSuccess }) => {
                 placeholder="Enter Work Location"
               />
 
+              {/* Priority Level */}
               <InputField
                 label="Priority Level"
                 type="select"
@@ -177,9 +236,9 @@ const AddMaterialIssue = ({ onclose, onSuccess }) => {
                   { value: "Medium", label: "Medium" },
                   { value: "Low", label: "Low" },
                 ]}
-                placeholder="Select Priority Level"
               />
 
+              {/* Requested By */}
               <InputField
                 label="Requested By"
                 type="text"
@@ -191,6 +250,7 @@ const AddMaterialIssue = ({ onclose, onSuccess }) => {
             </div>
           </div>
 
+          {/* Buttons */}
           <div className="mx-5 text-xs flex justify-end gap-2 mb-4">
             <button
               type="button"

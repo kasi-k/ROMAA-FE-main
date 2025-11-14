@@ -209,7 +209,7 @@ const AddMaterial = ({ onclose,onSuccess }) => {
                 readOnly
               />
               <InputField
-                label="Ordered Date"
+                label="Received Date"
                 type="date"
                 name="ordered_date"
                 register={register}

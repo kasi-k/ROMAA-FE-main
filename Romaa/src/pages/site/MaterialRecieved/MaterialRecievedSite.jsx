@@ -18,7 +18,7 @@ const MaterialRecievedSite = () => {
     { label: "Received Qty", key: "received_quantity" },
     { label: "Pending", key: "pending_quantity" },
     {
-      label: "Ordered Date",
+      label: "Received Date",
       key: "ordered_date",
       render: (row) => formatDate(row.ordered_date),
     },
