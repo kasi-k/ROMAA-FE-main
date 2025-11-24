@@ -186,7 +186,7 @@ const CreateRequest = ({ onclose, onSuccess }) => {
             {/* Materials Section */}
             <section>
               <h2 className="text-lg font-semibold text-white mb-2">
-                Materials Required
+                Work Details
               </h2>
 
               <div className="flex flex-wrap items-center gap-2 mb-3">
@@ -199,7 +199,7 @@ const CreateRequest = ({ onclose, onSuccess }) => {
                     })
                   }
                   className="border border-border-dark-grey rounded px-3 py-2 text-white placeholder:text-white w-40"
-                  placeholder="Material Name"
+                  placeholder="work description "
                 />
                 <input
                   value={materialInput.quantity}

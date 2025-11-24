@@ -105,7 +105,7 @@ const ViewWORequest = () => {
                 <thead>
                   <tr className="bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-200">
                     <th className="py-2 px-3 text-left">S.No</th>
-                    <th className="py-2 px-3 text-left">Material Name</th>
+                    <th className="py-2 px-3 text-left">Work </th>
                     <th className="py-2 px-3 text-center">Quantity</th>
                     <th className="py-2 px-3 text-center">Unit</th>
                     <th className="py-2 px-3 text-right">Rate (₹)</th>

@@ -187,7 +187,7 @@ const WORequest = () => {
                                       <thead className="bg-gray-50 dark:bg-slate-700 text-gray-700 dark:text-gray-200">
                                         <tr>
                                           <th className="border px-2 py-1">S.No</th>
-                                          <th className="border px-2 py-1 text-left">Material</th>
+                                          <th className="border px-2 py-1 text-left">Work</th>
                                           <th className="border px-2 py-1">Qty</th>
                                           <th className="border px-2 py-1">Unit</th>
                                           <th className="border px-2 py-1">Rate (₹)</th>
