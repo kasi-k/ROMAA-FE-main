@@ -155,6 +155,7 @@ import ViewContractor from "../pages/Hr/contract & Nmr/ViewContractor";
 import PenaltyCardGrid from "../pages/tender/project penalty/PenaltyView";
 import { ToastContainer } from "react-toastify";
 import WorkOrderRequestForm from "../pages/projects/Wo issuance/work order request/WorkOrderRequestForm";
+import EnquiryForm from "../pages/purchase/purchase enquiry/EnquiryForm";
 
 const AppRoutes = () => {
   return (
@@ -166,6 +167,7 @@ const AppRoutes = () => {
           <Route path="/forgotpassword" element={<ForgotPassword />} />
           <Route path="/resetpassword" element={<ResentPassword />} />
                  <Route path="/projects/woissuance/requestform/:tenderId/:requestId" element={<WorkOrderRequestForm />} />
+                 <Route path="/purchase/enquiry/enquiryform/:enquiryId" element={<EnquiryForm />} />
           <Route path="/" element={<LayOut />}>
             <Route path="/dashboard">
               <Route index element={<Dashboard />} />
