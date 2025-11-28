@@ -167,7 +167,7 @@ const AppRoutes = () => {
           <Route path="/forgotpassword" element={<ForgotPassword />} />
           <Route path="/resetpassword" element={<ResentPassword />} />
                  <Route path="/projects/woissuance/requestform/:tenderId/:requestId" element={<WorkOrderRequestForm />} />
-                 <Route path="/purchase/enquiry/enquiryform/:enquiryId" element={<EnquiryForm />} />
+                 <Route path="/purchase/enquiryform/:tenderId/:requestId" element={<EnquiryForm />} />
           <Route path="/" element={<LayOut />}>
             <Route path="/dashboard">
               <Route index element={<Dashboard />} />

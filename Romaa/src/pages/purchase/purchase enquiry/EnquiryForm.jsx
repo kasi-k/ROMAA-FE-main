@@ -10,7 +10,7 @@ const EnquiryForm = ({ onCancel, onSubmit }) => {
   const { tenderId, requestId } = useParams();
 
   const [rows, setRows] = useState([]);
-  const [workOrderRequestId, setWorkOrderRequestId] = useState([]);
+  const [purchaseOrderRequestId, setPurchaseOrderRequestId] = useState([]);
   const [loading, setLoading] = useState(true);
   
 
@@ -22,7 +22,7 @@ const EnquiryForm = ({ onCancel, onSubmit }) => {
     const fetchMaterials = async () => {
       try {
         const res = await axios.get(
-          `${API}/workorderrequest/api/getdetailbyId/${tenderId}/${requestId}`
+          `${API}/purchaseorderrequest/api/getdetailbyId/${tenderId}/${requestId}`
         );
 
         if (
@@ -41,7 +41,7 @@ const EnquiryForm = ({ onCancel, onSubmit }) => {
             })
           );
           setRows(formatted);
-          setWorkOrderRequestId(res.data.data._id);
+          setPurchaseOrderRequestId(res.data.data._id);
         }
       } catch (error) {
         console.error("Error fetching materials:", error);
@@ -94,16 +94,15 @@ const handleSubmit = async () => {
 
   try {
     const payload = {
-      workOrderRequestId,
+      purchaseOrderRequestId,
       tenderId,
       vendorId: selectedVendor.toUpperCase(),
       deliveryPeriod,
       quoteItems,
     };
 
-
     const res = await axios.post(
-      `${API}/workorderrequest/api/workorder-requests/${workOrderRequestId}/vendor-quotation`,
+      `${API}/purchaseorderrequest/api/purchase-requests/${purchaseOrderRequestId}/vendor-quotation`,
       payload
     );
 

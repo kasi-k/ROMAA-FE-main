@@ -4,79 +4,157 @@ import { toast } from "react-toastify";
 import axios from "axios";
 import { API } from "../../../constant";
 
-const initialMaterial = { material: "", qty: "", unit: "" };
+const initialMaterial = { materialName: "", quantity: "", unit: "" };
 
 const CreateEnquiry = ({ onclose, onSuccess }) => {
-  const [tenders, setTenders] = useState([]);
-  const [tenderId, setTenderId] = useState("");
-  const [location, setLocation] = useState("");
-  const [dueDate, setDueDate] = useState("");
+  const [entryType, setEntryType] = useState(""); // manual / existing
+
+  const [projects, setProjects] = useState([]);
+  const [requests, setRequests] = useState([]);
+
+  // Selected values
+  const [projectId, setProjectId] = useState("");
+  const [requestId, setRequestId] = useState("");
+
+  // Form fields
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+
+  const [siteName, setSiteName] = useState("");
+  const [siteLocation, setSiteLocation] = useState("");
+  const [siteIncharge, setSiteIncharge] = useState("");
+  const [requiredByDate, setRequiredByDate] = useState("");
+
   const [materials, setMaterials] = useState([{ ...initialMaterial }]);
 
-  // 🔥 Fetch Tender List on Modal Open
+  // 🔥 READONLY FLAG
+  const isReadOnly = entryType === "existing" && requestId;
+
+  /** LOAD PROJECTS */
   useEffect(() => {
-    fetchTenders();
+    loadProjects();
   }, []);
 
-  const fetchTenders = async () => {
+  const loadProjects = async () => {
     try {
       const res = await axios.get(`${API}/tender/all`);
-
-      setTenders(res.data.data);
-    } catch (err) {
-      toast.error("Failed to fetch Tender List");
+      setProjects(res.data?.data || []);
+    } catch {
+      toast.error("Failed to load projects");
     }
   };
 
-  // 🔥 When Tender Changes → Auto-fill Location
-  const handleTenderChange = (id) => {
-    setTenderId(id);
+  /** RESET FORM FIELDS */
+  const resetForm = () => {
+    setTitle("");
+    setDescription("");
+    setSiteName("");
+    setSiteLocation("");
+    setSiteIncharge("");
+    setRequiredByDate("");
+    setMaterials([{ ...initialMaterial }]);
+  };
 
-    const selected = tenders.find((t) => t.tender_id === id);
+  /** PROJECT SELECTION */
+  const handleProjectSelect = async (id) => {
+    setProjectId(id);
+    setRequestId("");
+    setRequests([]);
+    resetForm();
 
-    if (selected) {
-      setLocation(selected.tender_location?.city || "");
+if (entryType !== "existing") return;
+
+try {
+  const res = await axios.get(
+    `${API}/purchaseorderrequest/api/getbyId/${id}`
+  );
+
+  // Filter requests with status "Request Raised"
+  const pendingRequests = (res.data?.data || []).filter(
+    (r) => r.status === "Request Raised"
+  );
+
+  setRequests(pendingRequests);
+} catch {
+  toast.error("No Purchase Requests Found");
+}
+  };
+
+  /** REQUEST AUTO FILL */
+  const handleRequestSelect = async (id) => {
+    setRequestId(id);
+
+    try {
+      const res = await axios.get(
+        `${API}/purchaseorderrequest/api/getdetailbyId/${projectId}/${id}`
+      );
+
+      const d = res.data?.data || {};
+
+      setTitle(d.title || "");
+      setDescription(d.description || "");
+      setSiteName(d.siteDetails?.siteName || "");
+      setSiteLocation(d.siteDetails?.location || "");
+      setSiteIncharge(d.siteDetails?.siteIncharge || "");
+      setRequiredByDate(d.requiredByDate?.substring(0, 10) || "");
+      setMaterials(d.materialsRequired || [{ ...initialMaterial }]);
+    } catch {
+      toast.error("Failed to load request details");
     }
   };
 
+  /** MATERIAL ROW HANDLERS */
   const handleAddRow = () =>
     setMaterials([...materials, { ...initialMaterial }]);
 
-  const handleDeleteRow = (i) => {
+  const handleDeleteRow = (index) => {
     if (materials.length === 1) return;
-    setMaterials(materials.filter((_, idx) => idx !== i));
+    setMaterials(materials.filter((_, i) => i !== index));
   };
 
-  const handleChange = (i, field, value) => {
+  const handleMaterialChange = (i, field, value) => {
     const updated = [...materials];
     updated[i][field] = value;
     setMaterials(updated);
   };
 
-  const handleSubmit = () => {
-    if (!tenderId || !location || !dueDate) {
-      toast.warning("Please fill all required fields!");
-      return;
-    }
-
-    const empty = materials.some((m) => !m.material || !m.qty || !m.unit);
-    if (empty) {
-      toast.warning("Please fill all material details!");
-      return;
-    }
+  /** SUBMIT */
+  const handleSubmit = async () => {
+    if (!projectId) return toast.warning("Project is required");
 
     const payload = {
-      tenderId,
-      location,
-      dueDate,
-      materials,
+      projectId,
+      title,
+      description,
+      siteDetails: {
+        siteName,
+        location: siteLocation,
+        siteIncharge,
+      },
+      requiredByDate,
+      materialsRequired: materials,
+      status: "Quotation Requested",
     };
 
-    console.log("Final Enquiry Data:", payload);
+    try {
+      if (entryType === "existing") {
+        if (!requestId)
+          return toast.warning("Select Request ID for existing entry");
 
-    toast.success("Enquiry Created Successfully!");
-    onSuccess && onSuccess();
-    onclose();
+        await axios.put(
+          `${API}/purchaseorderrequest/api/updateStatus/${requestId}`,
+          { status: "Quotation Requested" }
+        );
+      } else {
+        await axios.post(`${API}/purchaseorderrequest/api/create`, payload);
+      }
+
+      toast.success("Saved successfully");
+      onSuccess && onSuccess();
+      onclose();
+    } catch {
+      toast.error("Failed to save");
+    }
   };
 
   return (
@@ -86,78 +164,172 @@ const CreateEnquiry = ({ onclose, onSuccess }) => {
         <div className="flex justify-between items-center px-6 py-4">
           <p className="text-2xl text-white font-semibold">Create Enquiry</p>
           <button
-            onClick={onclose}
             className="text-gray-400 hover:text-red-500"
+            onClick={onclose}
           >
-            <IoClose size={28} />
+            <IoClose size={26} />
           </button>
         </div>
 
         <div className="p-6">
-          {/* ENQUIRY DETAILS */}
-          <h2 className="text-lg font-semibold text-white mb-3">
-            Enquiry Details
-          </h2>
+          {/* ENTRY TYPE */}
+          <label className="text-white text-sm">Entry Type</label>
+          <select
+            value={entryType}
+            onChange={(e) => {
+              setEntryType(e.target.value);
+              setProjectId("");
+              setRequestId("");
+              resetForm();
+              setRequests([]);
+            }}
+            className="w-full border bg-layout-dark border-border-dark-grey rounded px-3 py-2 mt-1 text-white mb-4"
+          >
+            <option value="">Select</option>
+            <option value="manual">Manual Entry</option>
+            <option value="existing">Existing Request</option>
+          </select>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Tender Dropdown */}
-            <div>
-              <label className="text-white text-sm">Project ID</label>
+          {/* PROJECT */}
+          <label className="text-white text-sm">Project</label>
+          <select
+            value={projectId}
+            onChange={(e) => handleProjectSelect(e.target.value)}
+            disabled={isReadOnly}
+            className="w-full border bg-layout-dark border-border-dark-grey rounded px-3 py-2 mt-1 text-white mb-4"
+          >
+            <option value="">Select Project</option>
+            {projects.map((p, i) => (
+              <option key={i} value={p.tender_id}>
+                {p.tender_id}
+              </option>
+            ))}
+          </select>
+
+          {/* REQUEST */}
+          {entryType === "existing" && projectId && (
+            <>
+              <label className="text-white text-sm">Request ID</label>
               <select
-                value={tenderId}
-                onChange={(e) => handleTenderChange(e.target.value)}
-                className="w-full border bg-layout-dark border-border-dark-grey rounded px-3 py-2 mt-1  text-white"
+                value={requestId}
+                onChange={(e) => handleRequestSelect(e.target.value)}
+                className="w-full border bg-layout-dark border-border-dark-grey rounded px-3 py-2 mt-1 text-white mb-4"
               >
-                <option value="" className="text-white">
-                  Select Project
-                </option>
-
-                {tenders.map((t, i) => (
-                  <option key={i} value={t.tender_id} className="text-white">
-                    {t.tender_id}
+                <option value="">Select Request</option>
+                {requests.map((r, i) => (
+                  <option key={i} value={r.requestId}>
+                    {r.requestId}
                   </option>
                 ))}
               </select>
-            </div>
+            </>
+          )}
 
-            {/* Auto-filled Location */}
+          {/* TITLE */}
+          <label className="text-white text-sm">Title</label>
+          <input
+            className="w-full border border-border-dark-grey rounded px-3 py-2 mt-1 text-white mb-3"
+            value={title}
+            readOnly={isReadOnly}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+
+          {/* DESCRIPTION */}
+          <label className="text-white text-sm">Description</label>
+          <textarea
+            className="w-full border border-border-dark-grey rounded px-3 py-2 mt-1 text-white mb-3"
+            value={description}
+            readOnly={isReadOnly}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+
+          {/* SITE DETAILS */}
+          <h2 className="text-lg font-semibold text-white mt-4 mb-2">
+            Site Details
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
             <div>
-              <label className="text-white text-sm">Location</label>
+              <label className="text-white text-sm">Site Name</label>
               <input
-                value={location}
-                readOnly
-                className="w-full border border-border-dark-grey rounded px-3 py-2 mt-1 bg-gray-800 text-white"
-                placeholder="Location"
+                value={siteName}
+                readOnly={isReadOnly}
+                onChange={(e) => setSiteName(e.target.value)}
+                className="w-full border border-border-dark-grey rounded px-3 py-2 mt-1 text-white"
               />
             </div>
 
-            {/* Due Date */}
             <div>
-              <label className="text-white text-sm">Due Date</label>
+              <label className="text-white text-sm">Location</label>
+              <input
+                value={siteLocation}
+                readOnly={isReadOnly}
+                onChange={(e) => setSiteLocation(e.target.value)}
+                className="w-full border border-border-dark-grey rounded px-3 py-2 mt-1 text-white"
+              />
+            </div>
+
+            <div>
+              <label className="text-white text-sm">Site Incharge</label>
+              <input
+                value={siteIncharge}
+                readOnly={isReadOnly}
+                onChange={(e) => setSiteIncharge(e.target.value)}
+                className="w-full border border-border-dark-grey rounded px-3 py-2 mt-1 text-white"
+              />
+            </div>
+
+            <div>
+              <label className="text-white text-sm">Required By Date</label>
               <input
                 type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
+                value={requiredByDate}
+                readOnly={isReadOnly}
+                onChange={(e) => setRequiredByDate(e.target.value)}
                 className="w-full border border-border-dark-grey rounded px-3 py-2 mt-1 text-white"
               />
             </div>
           </div>
 
-          {/* MATERIAL TABLE */}
-          <div className="mt-8">
-            <h2 className="text-lg font-semibold text-white mb-2">
-              Materials Required
-            </h2>
+          {/* MATERIALS */}
+          <h2 className="text-lg font-semibold text-white mb-2">
+            Materials Required
+          </h2>
 
-            <div className="flex gap-4 mb-4">
-              <button
-                onClick={handleAddRow}
-                className="bg-darkest-blue text-white px-6 py-2 rounded"
-              >
-                + Add Row
-              </button>
-            </div>
+          {/* HIDE ADD ROW IN EXISTING */}
+          {!isReadOnly && (
+            <button
+              className="bg-darkest-blue text-white px-6 py-2 rounded mb-4"
+              onClick={handleAddRow}
+            >
+              + Add Row
+            </button>
+          )}
 
+          {isReadOnly ? (
+            // Display as plain table for existing request
+            <table className="w-full text-white text-sm border border-border-dark-grey">
+              <thead>
+                <tr className="bg-[#1f1f1f]">
+                  <th className="px-3 py-2 border">#</th>
+                  <th className="px-3 py-2 border">Material</th>
+                  <th className="px-3 py-2 border">Qty</th>
+                  <th className="px-3 py-2 border">Unit</th>
+                </tr>
+              </thead>
+              <tbody>
+                {materials.map((row, i) => (
+                  <tr key={i}>
+                    <td className="px-3 py-2 border">{i + 1}</td>
+                    <td className="px-3 py-2 border">{row.materialName}</td>
+                    <td className="px-3 py-2 border">{row.quantity}</td>
+                    <td className="px-3 py-2 border">{row.unit}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            // Editable table for manual entry
             <table className="w-full text-white text-sm border border-border-dark-grey">
               <thead>
                 <tr className="bg-[#1f1f1f]">
@@ -168,48 +340,46 @@ const CreateEnquiry = ({ onclose, onSuccess }) => {
                   <th className="px-3 py-2 border">Action</th>
                 </tr>
               </thead>
-
               <tbody>
                 {materials.map((row, i) => (
                   <tr key={i}>
                     <td className="px-3 py-2 border">{i + 1}</td>
-
                     <td className="px-3 py-2 border">
                       <input
-                        className="bg-transparent w-full outline-none text-white"
-                        value={row.material}
+                        value={row.materialName}
                         onChange={(e) =>
-                          handleChange(i, "material", e.target.value)
+                          handleMaterialChange(
+                            i,
+                            "materialName",
+                            e.target.value
+                          )
                         }
-                        placeholder="Material"
+                        className="bg-transparent w-full outline-none text-white"
                       />
                     </td>
-
                     <td className="px-3 py-2 border">
                       <input
+                        value={row.quantity}
+                        onChange={(e) =>
+                          handleMaterialChange(i, "quantity", e.target.value)
+                        }
                         className="bg-transparent w-full outline-none text-white"
-                        value={row.qty}
-                        onChange={(e) => handleChange(i, "qty", e.target.value)}
-                        placeholder="Qty"
                       />
                     </td>
-
                     <td className="px-3 py-2 border">
                       <input
-                        className="bg-transparent w-full outline-none text-white"
                         value={row.unit}
                         onChange={(e) =>
-                          handleChange(i, "unit", e.target.value)
+                          handleMaterialChange(i, "unit", e.target.value)
                         }
-                        placeholder="Unit"
+                        className="bg-transparent w-full outline-none text-white"
                       />
                     </td>
-
-                    <td className="px-3 py-2 border text-center">
+                    <td className="px-3 py-2 border">
                       {materials.length > 1 && (
                         <button
-                          onClick={() => handleDeleteRow(i)}
                           className="text-red-500 hover:underline"
+                          onClick={() => handleDeleteRow(i)}
                         >
                           Delete
                         </button>
@@ -219,20 +389,20 @@ const CreateEnquiry = ({ onclose, onSuccess }) => {
                 ))}
               </tbody>
             </table>
-          </div>
+          )}
 
-          {/* ACTION BUTTONS */}
+          {/* BUTTONS */}
           <div className="flex justify-end gap-4 mt-8">
             <button
-              onClick={onclose}
               className="px-6 py-3 border border-gray-500 text-gray-300 rounded"
+              onClick={onclose}
             >
               Cancel
             </button>
 
             <button
-              onClick={handleSubmit}
               className="px-6 py-3 bg-[#142e56] text-white rounded"
+              onClick={handleSubmit}
             >
               Save Enquiry
             </button>
