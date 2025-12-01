@@ -536,6 +536,11 @@ const LayOut = () => {
           icon: <RiGroupLine size={23} />,
           to: "/settings/master",
         },
+        {
+          title: "Assets",
+          icon: <RiGroupLine size={23} />,
+          to: "/settings/assets",
+        },
       ],
     },
   ];

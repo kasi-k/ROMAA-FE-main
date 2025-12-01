@@ -156,6 +156,7 @@ import PenaltyCardGrid from "../pages/tender/project penalty/PenaltyView";
 import { ToastContainer } from "react-toastify";
 import WorkOrderRequestForm from "../pages/projects/Wo issuance/work order request/WorkOrderRequestForm";
 import EnquiryForm from "../pages/purchase/purchase enquiry/EnquiryForm";
+import Assets from "../pages/settings/assets/Assets";
 
 const AppRoutes = () => {
   return (
@@ -517,6 +518,7 @@ const AppRoutes = () => {
                 <Route path="addroles" element={<AddRoles />} />
               </Route>
               <Route path="master" element={<Master />} />
+              <Route path="assets" element={<Assets />} />
             </Route>
           </Route>
         </Routes>

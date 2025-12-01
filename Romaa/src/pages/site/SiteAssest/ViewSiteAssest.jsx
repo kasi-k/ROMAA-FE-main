@@ -1,46 +1,22 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Title from "../../../components/Title";
+import { useLocation } from "react-router-dom";
 
 const ViewSiteAssest = () => {
-  const [mainFields] = useState([
-    {
-      label: "Asset Name",
-      value: "Excavator",
-      tooltip: "Name of the asset",
-    },
-    {
-      label: "Asset Type",
-      value: "Heavy Equipment",
-      tooltip: "Type/category of the asset",
-    },
-    {
-      label: "Unit",
-      value: "Nos",
-      tooltip: "Unit of measurement for the asset",
-    },
-    {
-      label: "Alloted To",
-      value: "John Doe",
-      tooltip: "Person to whom the asset is allotted",
-    },
-    {
-      label: "Site Location",
-      value: "Site A",
-      tooltip: "Location where the asset is deployed",
-    },
-    {
-      label: "Date",
-      value: "2024-06-01",
-      tooltip: "Date of allotment or record",
-    },
-    {
-      label: "Status",
-      value: "Active",
-      tooltip: "Current status of the asset",
-    },
-  ]);
+  const location = useLocation();
+  const [selectedAsset, setSelectedAsset] = useState(null);
 
-  // Tooltip wrapper
+  // Load selected asset from state or fallback to localStorage
+  useEffect(() => {
+    if (location.state?.item) {
+      setSelectedAsset(location.state.item);
+    } else {
+      // fallback if navigated directly
+      const storedItem = localStorage.getItem("selectedAsset");
+      if (storedItem) setSelectedAsset(JSON.parse(storedItem));
+    }
+  }, [location.state]);
+
   const TooltipWrapper = ({ tooltip, children }) => {
     if (!tooltip) return children;
     return (
@@ -54,13 +30,29 @@ const ViewSiteAssest = () => {
     );
   };
 
+  if (!selectedAsset) {
+    return (
+      <div className="p-4 text-center text-gray-500">No asset selected</div>
+    );
+  }
+
+  const fields = [
+    { label: "Asset Name", value: selectedAsset.assetName, tooltip: "Name of the asset" },
+    { label: "Asset Type", value: selectedAsset.assetType, tooltip: "Type/category of the asset" },
+    { label: "Unit", value: selectedAsset.unit || "-", tooltip: "Unit of measurement for the asset" },
+    { label: "Alloted To", value: selectedAsset.currentSite?.siteName || "-", tooltip: "Person to whom the asset is allotted" },
+    { label: "Site Location", value: selectedAsset.currentSite?.location || "-", tooltip: "Location where the asset is deployed" },
+    { label: "Date", value: selectedAsset.currentSite?.assignedDate ? new Date(selectedAsset.currentSite.assignedDate).toLocaleDateString() : "-", tooltip: "Date of allotment or record" },
+    { label: "Status", value: selectedAsset.currentStatus, tooltip: "Current status of the asset" },
+  ];
+
   return (
     <div>
       <Title title="Site Management" active_title="Site Asset Details" />
       <div className="dark:bg-layout-dark bg-white p-4 rounded-lg space-y-2 text-sm mt-3">
         <p className="font-semibold text-center text-lg">Site Asset Details</p>
         <div className="grid grid-cols-12 gap-2 items-start mt-3">
-          {mainFields.map((field, idx) => (
+          {fields.map((field, idx) => (
             <React.Fragment key={idx}>
               <p className="col-span-6 font-medium">{field.label}</p>
               <div className="col-span-6">
